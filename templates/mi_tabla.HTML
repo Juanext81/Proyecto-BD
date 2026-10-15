@@ -1,0 +1,125 @@
+<?php
+// Código PHP para procesar la consulta y devolver los resultados
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Obtener la consulta enviada desde el formulario
+    $consulta_sql = $_POST["consulta"];
+    $resultados = [];
+
+    // Conexión a la base de datos
+    $conexion = new mysqli('localhost', 'root', '', 'reserva_de_hotel');
+
+    // Verificar si la conexión fue exitosa
+    if ($conexion->connect_error) {
+        die("Error de conexión: " . $conexion->connect_error);
+    }
+
+    // Preparar y ejecutar la consulta
+    if ($stmt = $conexion->prepare($consulta_sql)) {
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+
+        // Recopilar los resultados
+        while ($fila = $resultado->fetch_assoc()) {
+            $resultados[] = $fila;
+        }
+        $stmt->close();
+    } else {
+        // Retornar el error en formato JSON
+        header("Content-Type: application/json");
+        echo json_encode([
+            "error" => "Error en la consulta: " . $conexion->error
+        ]);
+        exit();
+    }
+
+    // Cerrar la conexión
+    $conexion->close();
+
+    // Devolver los resultados como JSON
+    header("Content-Type: application/json");
+    echo json_encode($resultados);
+    exit();
+}
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reserva de Hoteles</title>
+    <style>
+        /* Aplica el fondo gris */
+        body {
+            background-color: #f0f0f0;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: black;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 40px;
+        }
+        button {
+            font-size: 1.2em;
+            margin: 10px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #4a4a4a;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #6a6a6a;
+        }
+        table {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 80%;
+        }
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+        tr:nth-child(even) {
+            background-color: #dddddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reserva de Hoteles</h1>
+
+    <!-- Formulario de Consulta SQL -->
+    <form action="index.php" method="POST" id="sql-form">
+        <label for="consulta">Consulta SQL:</label>
+        <input type="text" id="consulta" name="consulta" required>
+        <button type="submit">Ejecutar Consulta</button>
+    </form>
+
+    <!-- Espacio para Mostrar Resultados -->
+    <div id="resultado">
+        <h2>Resultados de la Consulta:</h2>
+        <pre id="resultado-json"></pre>
+    </div>
+
+    <script>
+        // Captura el envío del formulario para mostrar los resultados directamente
+        document.getElementById('sql-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const response = await fetch('index.php', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            document.getElementById('resultado-json').innerText = JSON.stringify(data, null, 2);
+        });
+    </script>
+</body>
+</html>
